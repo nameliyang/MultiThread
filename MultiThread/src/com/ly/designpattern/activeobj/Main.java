@@ -1,4 +1,4 @@
-package com.ly.activeobj;
+package com.ly.designpattern.activeobj;
 
 
 public class Main {
