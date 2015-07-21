@@ -4,10 +4,17 @@ package com.ly.designpattern.activeobj;
 public class Main {
 	public static void main(String[] args) {
 		
+		ActiveObject activeObject = ActiveObjectFactory.createActiveObject();
+		
+		new MakerClientThread("Alice", activeObject).start();
+		new MakerClientThread("Bobby", activeObject).start();
+		new DisplayClientThread("Chris", activeObject).start();
+		
 	}
 }
 
 class MakerClientThread extends Thread{
+	
 	private final ActiveObject activeObject;
 	private final char fillchar;
 	
@@ -49,7 +56,7 @@ class DisplayClientThread extends Thread{
 				Thread.sleep(200);
 			}
 		}catch(InterruptedException e){
-			
+			e.printStackTrace();
 		}
 	}
 }
@@ -60,10 +67,11 @@ interface ActiveObject {
 }
 
 class ActiveObjectFactory{
+	
 	public static ActiveObject createActiveObject(){
 		Servant servant = new Servant();
 		ActivationQueue queue = new ActivationQueue();
-		SchedulerThread scheduler = new SchedulerThread();
+		SchedulerThread scheduler = new SchedulerThread(queue);
 		Proxy proxy = new Proxy(scheduler,servant);
 		scheduler.start();
 		return proxy;
@@ -82,23 +90,90 @@ class Proxy implements ActiveObject{
 	
 	@Override
 	public Result makeString(int count, char fillchar) {
-		// TODO Auto-generated method stub
-		return null;
+		FutureResult future = new FutureResult();
+		scheduler.invoke(new MakeStringRequest(servant,future,count,fillchar));
+		return future;
 	}
+	
 	@Override
 	public void displayString(String string) {
+		scheduler.invoke(new DisplayStringRequest(servant,string));
 	}
 }
 
 class SchedulerThread extends Thread{
+	private final ActivationQueue queue;
+	
+	public SchedulerThread(ActivationQueue queue){
+		this.queue = queue;
+	}
+	
+	public void invoke(MethodRequest request) {
+		queue.putRequest(request);
+	}
+	
+	
+	@Override
+	public void run() {
+		while(true){
+			MethodRequest request = queue.tackRequest();
+			request.execute();
+		}
+	}	
 }
 
 class ActivationQueue{
 	
+	private static final int MAX_METHOD_REQUEST = 100;
+	private final MethodRequest[] requestQueue;
+	private int tail ;
+	private int head;
+	private int count;
+	
+	public ActivationQueue(){
+		this.requestQueue = new MethodRequest[MAX_METHOD_REQUEST];
+		this.head =0;
+		this.tail = 0;
+		this.count = 0;
+	}
+	
+	public synchronized void putRequest(MethodRequest request) {
+		while(count>=requestQueue.length){
+			try{
+				wait();
+			}catch(InterruptedException e){
+				e.printStackTrace();
+			}
+		}
+
+		requestQueue[tail] = request;
+		tail = (tail+1)%requestQueue.length;
+		count++;
+		notifyAll();
+	}
+
+	public synchronized MethodRequest tackRequest() {
+		while(count<=0){
+			try{
+				wait();
+			}catch(InterruptedException e){
+				e.printStackTrace();
+			}
+		}
+		MethodRequest request = requestQueue[head];
+		head = (head+1)%requestQueue.length;
+		count--;
+		notifyAll();
+		
+		return request;
+	}
+	
 }
 
 abstract class MethodRequest{
+	
 	protected final Servant servant;
+	
 	protected final FutureResult future;
 	
 	protected MethodRequest(Servant servant,FutureResult future){
@@ -133,12 +208,11 @@ class DisplayStringRequest extends MethodRequest{
 	}
 	
 	public void execute(){
-		
+		servant.displayString(string);
 	}
 }
 
 abstract  class Result{
-	
 	public abstract Object getResultValue();
 }
 
