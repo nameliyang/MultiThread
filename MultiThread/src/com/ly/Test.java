@@ -3,14 +3,27 @@ package com.ly;
 import java.util.concurrent.TimeUnit;
 
 public class Test {
-	public static void main(String[] args) {
-		
-		Data data = new Data();
-		ReadThread readThread = new ReadThread(data, "readThread");
-		WriteThread writeThread = new WriteThread(data, "writeThread");
-		writeThread.start();
-		readThread.start();
 	
+	private static boolean ready;
+	
+	private static int number;
+	
+	
+	public static void main(String[] args) {
+		new ReaderThread().start();
+		number =42;
+		ready = true;
+	}
+	
+	private static class ReaderThread extends Thread{
+		
+		@Override
+		public void run() {
+			while(!ready){
+				Thread.yield();
+			}
+			System.out.println(number);
+		}
 	}
 }
 

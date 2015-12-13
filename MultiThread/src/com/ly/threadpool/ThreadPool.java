@@ -1,7 +1,11 @@
 package com.ly.threadpool;
 
 import java.util.LinkedList;
-
+/**
+ * 
+ * @author liyang
+ *
+ */
 public class ThreadPool extends ThreadGroup{
 	
 	//线程池是否关闭
@@ -18,7 +22,7 @@ public class ThreadPool extends ThreadGroup{
 	
 	public ThreadPool(int poolSize) {
 		super("ThreadPool-"+(threadPoolID++));
-		setDaemon(true);
+	//	setDaemon(true);
 		workQueue = new LinkedList<Runnable>();
 		
 		for(int i =0;i<poolSize;i++){
@@ -31,10 +35,10 @@ public class ThreadPool extends ThreadGroup{
 	 * @param task
 	 */
 	public synchronized void execute(Runnable task){
-		
 		if(isClosed){
 			throw new IllegalStateException();
 		}
+		
 		if(task!=null){
 			workQueue.add(task);
 			notify();
@@ -71,7 +75,6 @@ public class ThreadPool extends ThreadGroup{
 			}catch(InterruptedException ex){};
 		}
 		
-		
 	}
 	
 	private class WorkThread extends Thread{
@@ -81,7 +84,6 @@ public class ThreadPool extends ThreadGroup{
 		
 		@Override
 		public void run() {
-			
 			while(!isInterrupted()){
 				Runnable task = null;
 				try{
